@@ -23,12 +23,12 @@ from sklearn.metrics import classification_report, accuracy_score
 def load_data(database_filepath):
     """ Load db and table 'messages_cat' in df.
      Extract X and Y and return them"""
-    engine = create_engine(database_filepath)
-    df = pd.read_sql('SELECT * FROM messages_cat', engine)
+    engine = create_engine('sqlite:///'+database_filepath)
+    df = pd.read_sql('SELECT * FROM message_cat', engine)
     X = df.message
     Y = df.drop(columns=['genre', 'id', 'message', 'original'], axis=1)
-
-    return X, Y
+    category_names = list(Y.columns)
+    return X, Y, category_names
 
 def tokenize(text):
     """ Create a list of tokens from a text"""
@@ -56,9 +56,11 @@ def build_model():
     Use Multinomial NB as classifier.
     Set different values to test for different hyperparameters
     Return model """
+
+
     pipeline = Pipeline([
         ('vect', CountVectorizer(tokenizer=tokenize)),
-        ('tfidf', TfidfTransformer()),
+        #('tfidf', TfidfTransformer()),
         ('clf', MultiOutputClassifier(MultinomialNB()))
     ])
 
@@ -66,13 +68,10 @@ def build_model():
         'vect__ngram_range': ((1, 1), (1, 2)),
         'vect__max_df': (0.5, 0.75, 1.0),
         'clf__estimator__alpha': [0.2, 0.6, 1]
-
     }
 
-    cv = GridSearchCV(estimator=pipeline, param_grid=parameters)
-    model_cv = cv.fit(X_train, Y_train)
 
-    return model_cv
+    return pipeline
 
 def evaluate_model(model, X_test, Y_test, category_names):
 
